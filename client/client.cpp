@@ -6,6 +6,7 @@ Client::Client(QWidget *parent)
     , ui(new Ui::Client)
 {
     ui->setupUi(this);
+    m_socket = new QTcpSocket();
 
     connect(ui->b_register, &QPushButton::clicked, this, &Client::onRegisterClicked);
     connect(ui->b_logIn, &QPushButton::clicked, this, &Client::onLogInClicked);
@@ -24,7 +25,33 @@ Client::Client(QWidget *parent)
     connect(ui->b_send, &QPushButton::clicked, this, &Client::sendMessage);
     connect(ui->b_leave, &QPushButton::clicked, this, &Client::leaveChatroom);
 
+
+    connect(m_socket, &QTcpSocket::connected, this, &Client::connected);
+    connect(m_socket, &QTcpSocket::disconnected, this, &Client::leaveChatroom);
+    connect(m_socket, &QTcpSocket::readyRead, this, &Client::received);
+
+
     openLogInPage();
+}
+
+void Client::received()
+{
+    ui->te_chat->setText(ui->te_chat->toHtml() + "\n" + m_socket->readAll());
+    ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
+}
+
+void Client::connected()
+{
+    isClientConnected = true;
+    if (auth() == true)
+        openChatroomPage();
+    else if (ui->statusbar->currentMessage().isEmpty()) {
+        ui->statusbar->showMessage("not authorized.");
+    }
+    else {
+        isClientConnected = false;
+        abortConnection();
+    }
 }
 
 void Client::openLogInPage()
@@ -52,25 +79,23 @@ void Client::openChatroomPage()
 bool Client::checkConnection()
 {
     if (ui->e_IP->text().isEmpty() == false) {
-        /*
-         *      connect to server here
-         *      if connected, return true
-         */
-        qDebug() << "connected";
+        if (isClientConnected) {
+            return true;
+        }
+        QString host = ui->e_IP->text();
+        int port = ui->sb_port->value();
+        m_socket->connectToHost(host, port);
         return true;
     }
-    else {
-        ui->statusbar->showMessage("unable to connect. check the IP and port or try again later.");
-    }
+
+    ui->statusbar->showMessage("unable to connect. check the IP and port or try again later.");
     return false;
 }
 
 void Client::abortConnection()
 {
-    /*
-     *      disconnect from the server
-     */
-    qDebug() << "connection aborted(";
+    isClientConnected = false;
+    m_socket->disconnectFromHost();
 }
 
 void Client::onRegisterClicked()
@@ -82,9 +107,7 @@ void Client::onRegisterClicked()
 
 void Client::onLogInClicked()
 {
-    if (checkConnection() == true && auth() == true) {
-        openChatroomPage();
-    }
+    checkConnection();
 }
 
 void Client::onRegister_2Clicked()
@@ -119,18 +142,16 @@ void Client::onCancelClicked()
 
 void Client::leaveChatroom()
 {
-    openLogInPage();
-    ui->te_message->clear();
+    if (ui->stackedWidget->currentIndex() == 2) {
+        openLogInPage();
+        ui->te_message->clear();
+    }
     abortConnection();
 }
 
 void Client::sendMessage()
 {
-    /*
-     *      send the message to the server
-     *      on the server, add a new textline to the chat
-     *      send updated chat_text to all clients
-     */
+    m_socket->write(QString("c:::m|" + ui->te_message->toPlainText()).toUtf8());
     ui->te_message->clear();
 }
 
@@ -156,15 +177,12 @@ void Client::createNewUser()
 
 bool Client::auth()
 {
-    qDebug() << "auth";
     if (ui->e_login->text().isEmpty() == false) {
         if (ui->e_password->text().isEmpty() == false) {
             bool match = false;
 
-            /*
-             *      send login and password to the server
-             *      if there is a match, 'match = true;'
-             */
+            m_socket->write(QString("c:::l|" + ui->e_login->text()+'\0'+ui->e_password->text()).toUtf8());
+
             match = true;
 
             if (match) return true;

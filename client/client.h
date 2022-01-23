@@ -2,7 +2,8 @@
 #define CLIENT_H
 
 #include <QMainWindow>
-#include <QSpinBox>
+#include <QTcpSocket>
+#include <QScrollBar>
 #include <QDebug>
 
 QT_BEGIN_NAMESPACE
@@ -17,7 +18,12 @@ public:
     Client(QWidget *parent = nullptr);
     ~Client();
 
+    bool isClientConnected = false;
+
 private slots:
+    void connected();
+    void received();
+
     void openLogInPage();
     void openRegistrationPage();
     void openChatroomPage();
@@ -38,5 +44,6 @@ private slots:
 
 private:
     Ui::Client *ui;
+    QTcpSocket *m_socket;
 };
 #endif // CLIENT_H
