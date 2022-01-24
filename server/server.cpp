@@ -11,7 +11,7 @@ void Server::incomingConnection(qintptr handle)
     client->setSocketDescriptor(handle);
 
     m_clients.append(client);
-    log("New client connected! [" + client->localAddress().toString() + "]");
+    log(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + " just connected!");
 
     connect(client, &QTcpSocket::disconnected, this, &Server::droppedConnection);
     connect(client, &QTcpSocket::readyRead, this, &Server::readyRead);
@@ -20,31 +20,54 @@ void Server::incomingConnection(qintptr handle)
 void Server::readyRead()
 {
     QTcpSocket *client = (QTcpSocket *)sender();
-
     QByteArray data = client->readAll();
+
+    log(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "| " + data);
+
     if(data.indexOf("c:::m|") == 0) { messageReceived(client, data); }
-    if(data.indexOf("c:::r|") == 0) { checkLogin(client, data); }
-    if(data.indexOf("c:::l|") == 0) { auth(client, data); }
-
-    log(data);
-
-    err("Command can't be parsed.");
+    else if(data.indexOf("c:::r|") == 0) { addUser(client, data); }
+    else if(data.indexOf("c:::l|") == 0) { auth(client, data); }
+    else err("Unknown protocol.");
 }
 
 void Server::droppedConnection()
 {
     QTcpSocket *client = (QTcpSocket *)sender();
     m_clients.remove(m_clients.indexOf(client));
-    log(client->localAddress().toString() + " dropped the connection!");
+    log(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + " dropped the connection!");
 
     connect(client, &QTcpSocket::disconnected, this, &Server::droppedConnection);
     connect(client, &QTcpSocket::readyRead, this, &Server::readyRead);
 }
 
+bool Server::addUser(QTcpSocket *client, QByteArray dataset)
+{
+    dataset.remove(0, QString("c:::r|").length());
+    int endOfLogin = dataset.indexOf('\t');
+
+    QByteArray login = dataset.remove(endOfLogin, dataset.length());
+    QByteArray password = dataset.remove(0, endOfLogin+1);
+
+    log(dataset);
+
+    if(checkLogin(client, login) == true) {
+        //create new entry
+        log(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) +
+                                                    "| Added new user: [" + login + "]");
+        client->write("s:::r|Permitted.");
+        return true;
+    }
+    else {
+        err("Login '" + login + "' is already taken.");
+        client->write("s:::r|Forbidden.");
+        return false;
+    }
+}
+
 void Server::messageReceived(QTcpSocket *client, QByteArray msg)
 {
     msg.remove(0, QByteArray("c:::m|").length());
-    QByteArray data = QString(client->localAddress().toString() + ": " + msg).toUtf8();
+    QByteArray data = QString(msg).toUtf8();
 
     for (QTcpSocket *socket : m_clients) {
         socket->write(data);
@@ -53,7 +76,7 @@ void Server::messageReceived(QTcpSocket *client, QByteArray msg)
 
 bool Server::checkLogin(QTcpSocket *client, QByteArray login)
 {
-    login.remove(0, QByteArray("c:::r|").length());
+    //check login...
     qDebug() << "loginChecked";
     return true;
 }
@@ -61,7 +84,7 @@ bool Server::checkLogin(QTcpSocket *client, QByteArray login)
 bool Server::auth(QTcpSocket *client, QByteArray dataset)
 {
     dataset.remove(0, QString("c:::l|").length());
-    int endOfLogin = dataset.indexOf('\0');
+    int endOfLogin = dataset.indexOf('\t');
 
     QByteArray login = dataset.remove(endOfLogin, dataset.length());
 

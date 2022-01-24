@@ -18,8 +18,6 @@ public:
     Client(QWidget *parent = nullptr);
     ~Client();
 
-    bool isClientConnected = false;
-
 private slots:
     void connected();
     void received();
@@ -38,7 +36,6 @@ private slots:
     void sendMessage();
     void leaveChatroom();
 
-    bool isLoginFree();
     void createNewUser();
     bool auth();
 

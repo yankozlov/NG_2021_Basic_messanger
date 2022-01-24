@@ -27,31 +27,32 @@ Client::Client(QWidget *parent)
 
 
     connect(m_socket, &QTcpSocket::connected, this, &Client::connected);
-    connect(m_socket, &QTcpSocket::disconnected, this, &Client::leaveChatroom);
+    connect(m_socket, &QTcpSocket::disconnected, this, &Client::abortConnection);
     connect(m_socket, &QTcpSocket::readyRead, this, &Client::received);
-
 
     openLogInPage();
 }
 
 void Client::received()
 {
-    ui->te_chat->setText(ui->te_chat->toHtml() + "\n" + m_socket->readAll());
-    ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
+    QByteArray receivedData = m_socket->readAll();
+    if (receivedData.indexOf("s:::r|Permitted.") == 0) {
+        openLogInPage();
+        abortConnection();
+    }
+    else if (receivedData.indexOf("s:::r|Forbidden.") == 0) {
+        ui->statusbar->showMessage("this login is alredy taken");       
+    }
+    else {
+        //set limit for chat size
+        ui->te_chat->setText(ui->te_chat->toHtml() + "\n" + receivedData);
+        ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
+    }
 }
 
 void Client::connected()
 {
-    isClientConnected = true;
-    if (auth() == true)
-        openChatroomPage();
-    else if (ui->statusbar->currentMessage().isEmpty()) {
-        ui->statusbar->showMessage("not authorized.");
-    }
-    else {
-        isClientConnected = false;
-        abortConnection();
-    }
+    ui->statusbar->clearMessage();
 }
 
 void Client::openLogInPage()
@@ -79,23 +80,37 @@ void Client::openChatroomPage()
 bool Client::checkConnection()
 {
     if (ui->e_IP->text().isEmpty() == false) {
-        if (isClientConnected) {
+        if (m_socket->state() == QAbstractSocket::ConnectedState) {
             return true;
         }
         QString host = ui->e_IP->text();
         int port = ui->sb_port->value();
         m_socket->connectToHost(host, port);
-        return true;
+        m_socket->waitForConnected(500);
+        if (m_socket->state() == QAbstractSocket::ConnectedState)
+            return true;
+        else {
+            ui->statusbar->showMessage("unable to connect. check the IP and port or try again later.");
+            abortConnection();
+            return false;
+        }
     }
-
-    ui->statusbar->showMessage("unable to connect. check the IP and port or try again later.");
-    return false;
+    else {
+        ui->statusbar->showMessage("enter the IP address.");
+        return false;
+    }
 }
 
 void Client::abortConnection()
-{
-    isClientConnected = false;
+{    
+    if (m_socket->state() == QAbstractSocket::ConnectingState) {
+        m_socket->abort();
+    }
     m_socket->disconnectFromHost();
+    if (ui->stackedWidget->currentIndex() == 2) {
+        leaveChatroom();
+        ui->statusbar->showMessage("connection dropped.");
+    }
 }
 
 void Client::onRegisterClicked()
@@ -107,26 +122,36 @@ void Client::onRegisterClicked()
 
 void Client::onLogInClicked()
 {
-    checkConnection();
+    if (ui->e_IP->text().isEmpty() == false) {
+        if (ui->e_login->text().isEmpty() == false) {
+            if (ui->e_password->text().isEmpty() == false) {
+                if (checkConnection() == true && auth() == true)
+                    openChatroomPage();
+                else {
+                    if (ui->statusbar->currentMessage().isEmpty()) {
+                        ui->statusbar->showMessage("not authorized.");
+                    }
+                    abortConnection();
+                }
+            }
+            else ui->statusbar->showMessage("enter the password.");
+        }
+        else ui->statusbar->showMessage("enter the login.");
+    }
+    else ui->statusbar->showMessage("enter the IP address.");
 }
 
 void Client::onRegister_2Clicked()
 {
     if (ui->e_newLogin->text().isEmpty() == false) {
-        if (isLoginFree() == true) {
-            if (ui->e_newPassword->text().length() < 6 || ui->e_newPassword->text().length() > 32) {
-                ui->statusbar->showMessage("the password should be 6 to 32 symbols long.");
-            }
-            else if (ui->e_newPassword->text() == ui->e_repPassword->text()) {
-                createNewUser();
-                openLogInPage();
-            }
-            else {
-                ui->statusbar->showMessage("passwords don't match.");
-            }
+        if (ui->e_newPassword->text().length() < 6 || ui->e_newPassword->text().length() > 32) {
+            ui->statusbar->showMessage("the password should be 6 to 32 symbols long.");
+        }
+        else if (ui->e_newPassword->text() == ui->e_repPassword->text()) {
+            createNewUser();
         }
         else {
-            ui->statusbar->showMessage("this login is already taken.");
+            ui->statusbar->showMessage("passwords don't match.");
         }
     }
     else {
@@ -145,8 +170,11 @@ void Client::leaveChatroom()
     if (ui->stackedWidget->currentIndex() == 2) {
         openLogInPage();
         ui->te_message->clear();
+        ui->te_chat->clear();
     }
-    abortConnection();
+    if (m_socket->state() != QAbstractSocket::UnconnectedState) {
+        abortConnection();
+    }
 }
 
 void Client::sendMessage()
@@ -155,42 +183,25 @@ void Client::sendMessage()
     ui->te_message->clear();
 }
 
-bool Client::isLoginFree()
-{
-    /*
-     *      send the login to the server
-     *      if the login is not mentioned in database, return true
-     *      else return false
-     */
-    qDebug() << "let's say login is free.";
-    return true;
-}
-
 void Client::createNewUser()
 {
-    /*
-     *      send the login and the password to the server
-     *      add a new entry to the database
-     */
-    qDebug() << "sending microwaves to the server...";
+    if (checkConnection() == true) {
+        m_socket->write(QString("c:::r|" + ui->e_newLogin->text()+'\t'+ui->e_newPassword->text()).toUtf8());
+    }
+    else {
+        ui->statusbar->showMessage("cannot connect. try again later.");
+    }
 }
 
 bool Client::auth()
 {
-    if (ui->e_login->text().isEmpty() == false) {
-        if (ui->e_password->text().isEmpty() == false) {
-            bool match = false;
+    bool match = false;
+    m_socket->write(QString("c:::l|" + ui->e_login->text()+'\t'+ui->e_password->text()).toUtf8());
 
-            m_socket->write(QString("c:::l|" + ui->e_login->text()+'\0'+ui->e_password->text()).toUtf8());
+    match = true;
 
-            match = true;
-
-            if (match) return true;
-            else ui->statusbar->showMessage("wrong login or password. try again.");
-        }
-        else ui->statusbar->showMessage("enter the password.");
-    }
-    else ui->statusbar->showMessage("enter the login.");
+    if (match) return true;
+    else ui->statusbar->showMessage("wrong login or password. try again.");
 
     return false;
 }
@@ -199,4 +210,3 @@ Client::~Client()
 {
     delete ui;
 }
-

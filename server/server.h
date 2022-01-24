@@ -15,7 +15,7 @@ public:
 private slots:
     void readyRead();
     void droppedConnection();
-    //void setNickname(QTcpSocket *client, QByteArray);
+    bool addUser(QTcpSocket *client, QByteArray dataset);
     void messageReceived(QTcpSocket *client, QByteArray msg);
 
     bool checkLogin(QTcpSocket *client, QByteArray login);
@@ -25,8 +25,8 @@ protected:
     void incomingConnection(qintptr handle);
 
 private:
-    void log(QString msg) { qDebug() << "[SERVER]: " << msg; }
-    void err(QString msg) { qDebug() << "[ERROR]: " << msg; }
+    void log(QString msg) { qDebug() << "[SERVER]:" << msg; }
+    void err(QString msg) { qDebug() << "[ERROR]:" << msg; }
 
     QVector <QTcpSocket *> m_clients;
 
