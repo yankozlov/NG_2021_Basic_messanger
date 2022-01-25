@@ -37,7 +37,7 @@ private slots:
     void leaveChatroom();
 
     void createNewUser();
-    bool auth();
+    void auth();
 
 private:
     Ui::Client *ui;

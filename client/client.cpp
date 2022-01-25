@@ -41,7 +41,14 @@ void Client::received()
         abortConnection();
     }
     else if (receivedData.indexOf("s:::r|Forbidden.") == 0) {
-        ui->statusbar->showMessage("this login is alredy taken");       
+        ui->statusbar->showMessage("this login is alredy taken.");
+    }
+    else if (receivedData.indexOf("s:::l|Permitted.") == 0) {
+        openChatroomPage();
+    }
+    else if (receivedData.indexOf("s:::l|Forbidden.") == 0) {
+        ui->statusbar->showMessage("wrong login or password. try again.");
+        abortConnection();
     }
     else {
         //set limit for chat size
@@ -125,14 +132,8 @@ void Client::onLogInClicked()
     if (ui->e_IP->text().isEmpty() == false) {
         if (ui->e_login->text().isEmpty() == false) {
             if (ui->e_password->text().isEmpty() == false) {
-                if (checkConnection() == true && auth() == true)
-                    openChatroomPage();
-                else {
-                    if (ui->statusbar->currentMessage().isEmpty()) {
-                        ui->statusbar->showMessage("not authorized.");
-                    }
-                    abortConnection();
-                }
+                if (checkConnection() == true) auth();
+                else ui->statusbar->showMessage("cannot connect.");
             }
             else ui->statusbar->showMessage("enter the password.");
         }
@@ -193,17 +194,9 @@ void Client::createNewUser()
     }
 }
 
-bool Client::auth()
+void Client::auth()
 {
-    bool match = false;
     m_socket->write(QString("c:::l|" + ui->e_login->text()+'\t'+ui->e_password->text()).toUtf8());
-
-    match = true;
-
-    if (match) return true;
-    else ui->statusbar->showMessage("wrong login or password. try again.");
-
-    return false;
 }
 
 Client::~Client()

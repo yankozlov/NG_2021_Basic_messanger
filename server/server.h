@@ -3,6 +3,8 @@
 
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QtSql>
+#include <QDir>
 #include <QDebug>
 
 class Server : public QTcpServer
@@ -18,18 +20,21 @@ private slots:
     bool addUser(QTcpSocket *client, QByteArray dataset);
     void messageReceived(QTcpSocket *client, QByteArray msg);
 
-    bool checkLogin(QTcpSocket *client, QByteArray login);
-    bool auth(QTcpSocket *client, QByteArray dataset);
+    void setDatabase();
+
+    bool checkLogin(QByteArray login);
+    void auth(QTcpSocket *client, QByteArray dataset);
 
 protected:
     void incomingConnection(qintptr handle);
 
 private:
-    void log(QString msg) { qDebug() << "[SERVER]:" << msg; }
-    void err(QString msg) { qDebug() << "[ERROR]:" << msg; }
+    void serverLog(QString msg) { qDebug() << "[SERVER]:" << msg; }
+    void serverErr(QString msg) { qDebug() << "[ERROR]:" << msg; }
 
     QVector <QTcpSocket *> m_clients;
-
+    QMap <QTcpSocket *, QString> m_activeUsers;
+    QSqlDatabase database;
 };
 
 #endif // SERVER_H
