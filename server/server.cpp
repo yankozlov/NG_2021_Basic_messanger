@@ -45,8 +45,11 @@ void Server::readyRead()
 void Server::droppedConnection()
 {
     QTcpSocket *client = (QTcpSocket *)sender();
-    m_clients.remove(m_clients.indexOf(client));
-
+    if (m_clients.contains(client)) {
+        m_clients.removeOne(client);
+        m_activeUsers.remove(client);
+        refreshUsersList();
+    }
     serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + " dropped the connection!");
 
     connect(client, &QTcpSocket::disconnected, this, &Server::droppedConnection);
@@ -138,11 +141,34 @@ void Server::auth(QTcpSocket *client, QByteArray dataset)
         client->write("s:::l|Permitted.");
 
         m_activeUsers.insert(client, login);
+
+        refreshUsersList();
     }
     else {
         serverErr(QString(client->peerAddress().toString() + ":" + QString::number(client->peerPort())
                           + "| Authorisation declined."));
 
         client->write("s:::l|Forbidden.");
+    }
+}
+
+void Server::refreshUsersList()
+{
+    QList<QString> usersList;
+
+    foreach (QString value, m_activeUsers) {
+        usersList.append(value);
+    }
+
+    usersList.removeDuplicates();
+
+    QString usersString = "s:::u|";
+    for (int i = 0; i < usersList.size(); i++) {
+        usersString.append(usersList.at(i)).append('\n');
+    }
+
+    serverLog(usersString);
+    for (QTcpSocket *socket : m_clients) {
+        socket->write(usersString.toUtf8());
     }
 }

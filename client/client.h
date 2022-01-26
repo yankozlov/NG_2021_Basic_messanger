@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QTcpSocket>
 #include <QScrollBar>
+#include <QStringListModel>
 #include <QDebug>
 
 QT_BEGIN_NAMESPACE
@@ -33,6 +34,8 @@ private slots:
     void onLogInClicked();
     void onRegister_2Clicked();
     void onCancelClicked();
+
+    void refreshUsersList(QByteArray data);
     void sendMessage();
     void leaveChatroom();
 
@@ -42,5 +45,7 @@ private slots:
 private:
     Ui::Client *ui;
     QTcpSocket *m_socket;
+    QStringListModel *model;
+    QStringList activeUsers;
 };
 #endif // CLIENT_H

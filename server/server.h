@@ -24,6 +24,7 @@ private slots:
 
     bool checkLogin(QByteArray login);
     void auth(QTcpSocket *client, QByteArray dataset);
+    void refreshUsersList();
 
 protected:
     void incomingConnection(qintptr handle);
