@@ -13,7 +13,8 @@ SOURCES += \
     client.cpp
 
 HEADERS += \
-    client.h
+    client.h \
+    encription.h
 
 FORMS += \
     client.ui
@@ -22,3 +23,5 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+DISTFILES +=

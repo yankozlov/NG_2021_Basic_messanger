@@ -1,5 +1,6 @@
 #include "client.h"
 #include "ui_client.h"
+#include "encription.h"
 
 Client::Client(QWidget *parent)
     : QMainWindow(parent)
@@ -64,8 +65,13 @@ void Client::received()
     if (receivedData.indexOf("s:::u|") == 0) {
         refreshUsersList(receivedData);
     }
-    else {
+    else if (receivedData.indexOf("s:::m|") == 0) {
         //set limit for chat size
+
+        receivedData.remove(0, QString("s:::m|").length());
+
+        receivedData = (ui->e_login->text() + ": " + decript(QString(receivedData.remove(0, ui->e_login->text().length()+2)))).toUtf8();
+
         ui->te_chat->setText(ui->te_chat->toHtml() + "\n" + receivedData);
         ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
     }
@@ -206,8 +212,12 @@ void Client::leaveChatroom()
 
 void Client::sendMessage()
 {
-    m_socket->write(QString("c:::m|" + ui->te_message->toPlainText()).toUtf8());
-    ui->te_message->clear();
+    QString message = encript(ui->te_message->toPlainText().toUtf8());
+
+    if(message.length() > 0) {
+        m_socket->write(QString("c:::m|" + message).toUtf8());
+        ui->te_message->clear();
+    }
 }
 
 void Client::createNewUser()

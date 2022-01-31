@@ -32,9 +32,9 @@ void Server::readyRead()
     QTcpSocket *client = (QTcpSocket *)sender();
     QByteArray data = client->readAll();
 
-    if (data.indexOf("c:::m|") != 0) {
-        serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|" + data.left(6));
-    }
+//    if (data.indexOf("c:::m|") != 0) {
+//        serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|" + data.left(6));
+//    }
 
     if(data.indexOf("c:::m|") == 0) { messageReceived(client, data); }
     else if(data.indexOf("c:::r|") == 0) { addUser(client, data); }
@@ -90,7 +90,7 @@ void Server::messageReceived(QTcpSocket *client, QByteArray msg)
     serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|" + data);
 
     for (QTcpSocket *socket : m_clients) {
-        socket->write(data);
+        socket->write("s:::m|"+data);
     }
 }
 
