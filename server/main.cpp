@@ -1,7 +1,7 @@
 #include <QCoreApplication>
 #include <server.h>
 
-void coreLog(QString msg) { qDebug() << "[CORE]: " + msg; }
+void coreLog(QString msg) { qDebug() << QTime::currentTime().toString() + "|[CORE]: " + msg; }
 
 int main(int argc, char *argv[])
 {

@@ -68,9 +68,15 @@ void Client::received()
     else if (receivedData.indexOf("s:::m|") == 0) {
         //set limit for chat size
 
+        //QString time_str = QTime::currentTime().toString().remove(5, 3);
+        //for better interface
+
         receivedData.remove(0, QString("s:::m|").length());
 
-        receivedData = (ui->e_login->text() + ": " + decript(QString(receivedData.remove(0, ui->e_login->text().length()+2)))).toUtf8();
+        QString senderUsername = receivedData.left(receivedData.indexOf(':'));
+        receivedData.remove(0, senderUsername.length()+2);
+
+        receivedData = (senderUsername + ": " + decript(QString(receivedData))).toUtf8();
 
         ui->te_chat->setText(ui->te_chat->toHtml() + "\n" + receivedData);
         ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
@@ -191,8 +197,10 @@ void Client::refreshUsersList(QByteArray data) {
     data.remove(0, QString("s:::u|").length());
     for (int i = 0; data.length() > 0; i++) {
         QString user = data.left(data.indexOf('\n'));
-        activeUsers.insert(i, user);
 
+        if (user == ui->e_login->text()) user.append(" (you)");
+
+        activeUsers.insert(i, user);
         data.remove(0, data.indexOf('\n')+1);
     }
     model->setStringList(activeUsers);
@@ -212,7 +220,7 @@ void Client::leaveChatroom()
 
 void Client::sendMessage()
 {
-    QString message = encript(ui->te_message->toPlainText().toUtf8());
+    QString message = encript(ui->te_message->toPlainText());
 
     if(message.length() > 0) {
         m_socket->write(QString("c:::m|" + message).toUtf8());
@@ -233,6 +241,18 @@ void Client::createNewUser()
 void Client::auth()
 {
     m_socket->write(QString("c:::l|" + ui->e_login->text()+'\t'+ui->e_password->text()).toUtf8());
+}
+
+void Client::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Escape) {
+        if (ui->stackedWidget->currentIndex() == 1) onCancelClicked();
+        else if (ui->stackedWidget->currentIndex() == 2) leaveChatroom();
+    }
+//    else if (event->key() == Qt::Key_Enter) {
+//        if (ui->stackedWidget->currentIndex() == 0) onLogInClicked();
+//        if (ui->stackedWidget->currentIndex() == 1) onRegister_2Clicked();
+//    }
 }
 
 Client::~Client()

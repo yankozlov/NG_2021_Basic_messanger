@@ -5,6 +5,7 @@
 #include <QTcpSocket>
 #include <QtSql>
 #include <QDir>
+#include <QTime>
 #include <QDebug>
 
 class Server : public QTcpServer
@@ -30,8 +31,8 @@ protected:
     void incomingConnection(qintptr handle);
 
 private:
-    void serverLog(QString msg) { qDebug() << "[SERVER]:" << msg; }
-    void serverErr(QString msg) { qDebug() << "[ERROR]:" << msg; }
+    void serverLog(QString msg) { qDebug() << QTime::currentTime().toString() + "|[SERVER]:" + msg; }
+    void serverErr(QString msg) { qDebug() << QTime::currentTime().toString() + "|[ERROR]: " + msg; }
 
     QVector <QTcpSocket *> m_clients;
     QMap <QTcpSocket *, QString> m_activeUsers;

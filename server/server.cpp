@@ -167,7 +167,7 @@ void Server::refreshUsersList()
         usersString.append(usersList.at(i)).append('\n');
     }
 
-    serverLog(usersString);
+    serverLog("Active users list" + usersString);
     for (QTcpSocket *socket : m_clients) {
         socket->write(usersString.toUtf8());
     }

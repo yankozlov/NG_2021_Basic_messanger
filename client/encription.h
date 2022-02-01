@@ -2,7 +2,7 @@
 #define ENCRIPTION_H
 
 #include <QApplication>
-
+//          Vigenere Cipher
 QByteArray k = "-XEpzq^^yEfA9dpr";
 
 QString encript(QString text)

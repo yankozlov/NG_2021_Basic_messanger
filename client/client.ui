@@ -18,7 +18,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="login_page">
        <layout class="QHBoxLayout" name="horizontalLayout_9">
@@ -516,6 +516,9 @@
               <width>16777215</width>
               <height>100</height>
              </size>
+            </property>
+            <property name="autoFormatting">
+             <set>QTextEdit::AutoNone</set>
             </property>
            </widget>
           </item>

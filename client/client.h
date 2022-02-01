@@ -5,6 +5,8 @@
 #include <QTcpSocket>
 #include <QScrollBar>
 #include <QStringListModel>
+#include <QKeyEvent>
+#include <QTime>
 #include <QDebug>
 
 QT_BEGIN_NAMESPACE
@@ -47,5 +49,7 @@ private:
     QTcpSocket *m_socket;
     QStringListModel *model;
     QStringList activeUsers;
+
+    void keyPressEvent(QKeyEvent *event) override;
 };
 #endif // CLIENT_H
