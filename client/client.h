@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QTcpSocket>
 #include <QScrollBar>
+#include <QStandardItemModel>
 #include <QStringListModel>
 #include <QKeyEvent>
 #include <QTime>
@@ -47,8 +48,7 @@ private slots:
 private:
     Ui::Client *ui;
     QTcpSocket *m_socket;
-    QStringListModel *model;
-    QStringList activeUsers;
+    QStandardItemModel *model;
 
     void keyPressEvent(QKeyEvent *event) override;
 };

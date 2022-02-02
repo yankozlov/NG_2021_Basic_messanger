@@ -9,7 +9,7 @@ Client::Client(QWidget *parent)
     ui->setupUi(this);
     m_socket = new QTcpSocket();
 
-    model = new QStringListModel();
+    model = new QStandardItemModel();
     ui->lv_usersOnline->setModel(model);
 
     connect(ui->b_register, &QPushButton::clicked, this, &Client::onRegisterClicked);
@@ -193,17 +193,17 @@ void Client::onCancelClicked()
 }
 
 void Client::refreshUsersList(QByteArray data) {
-    activeUsers.clear();
+    model->clear();
     data.remove(0, QString("s:::u|").length());
+
     for (int i = 0; data.length() > 0; i++) {
         QString user = data.left(data.indexOf('\n'));
 
         if (user == ui->e_login->text()) user.append(" (you)");
 
-        activeUsers.insert(i, user);
+        model->appendRow(new QStandardItem(QIcon(":/user.png"), user));
         data.remove(0, data.indexOf('\n')+1);
     }
-    model->setStringList(activeUsers);
 }
 
 void Client::leaveChatroom()
