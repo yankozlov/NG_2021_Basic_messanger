@@ -1,5 +1,12 @@
 #include "server.h"
 
+/*                              TODO
+ * handle the case of database is being deleted while server works
+ * implement the thread sending of messages
+ * provide saving of messages
+ * decript encripted auth and register data from client
+ */
+
 Server::Server()
 {
     QDir path = QDir::currentPath();
@@ -12,6 +19,9 @@ Server::Server()
         }
         QSqlQuery query;
         query.exec("DELETE FROM USERS WHERE NICKNAME IS NULL;");
+    }
+    else {
+        serverErr("Server might work incorrectly: SQL database doesn't open");
     }
 }
 
@@ -31,10 +41,6 @@ void Server::readyRead()
 {
     QTcpSocket *client = (QTcpSocket *)sender();
     QByteArray data = client->readAll();
-
-//    if (data.indexOf("c:::m|") != 0) {
-//        serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|" + data.left(6));
-//    }
 
     if(data.indexOf("c:::m|") == 0) { messageReceived(client, data); }
     else if(data.indexOf("c:::r|") == 0) { addUser(client, data); }
@@ -96,13 +102,6 @@ void Server::messageReceived(QTcpSocket *client, QByteArray msg)
 
 void Server::setDatabase()
 {
-/*      if database is being deleted while server works
-   if(*.....*) {
-        database.close();
-        Server();
-        return;
-    }
-*/
     QSqlQuery query;
     query.exec("CREATE TABLE USERS "
                "(NICKNAME VARCHAR(30), "
@@ -125,7 +124,6 @@ void Server::auth(QTcpSocket *client, QByteArray dataset)
     int endOfLogin = dataset.indexOf('\t');
 
     QByteArray login = dataset.left(endOfLogin);
-
     QByteArray password = dataset.remove(0, endOfLogin+1);
 
     QSqlQuery query;
@@ -141,7 +139,6 @@ void Server::auth(QTcpSocket *client, QByteArray dataset)
         client->write("s:::l|Permitted.");
 
         m_activeUsers.insert(client, login);
-
         refreshUsersList();
     }
     else {

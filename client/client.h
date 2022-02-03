@@ -48,7 +48,6 @@ private slots:
 private:
     Ui::Client *ui;
     QTcpSocket *m_socket;
-    QStandardItemModel *model;
 
     void keyPressEvent(QKeyEvent *event) override;
 };

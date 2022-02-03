@@ -2,15 +2,19 @@
 #include "ui_client.h"
 #include "encription.h"
 
+/*              TODO
+ * set message length limit
+ * implement personal chat
+ * send message on Enter pressed
+ * encript auth and register data
+*/
+
 Client::Client(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::Client)
 {
     ui->setupUi(this);
     m_socket = new QTcpSocket();
-
-    model = new QStandardItemModel();
-    ui->lv_usersOnline->setModel(model);
 
     connect(ui->b_register, &QPushButton::clicked, this, &Client::onRegisterClicked);
     connect(ui->b_logIn, &QPushButton::clicked, this, &Client::onLogInClicked);
@@ -193,7 +197,7 @@ void Client::onCancelClicked()
 }
 
 void Client::refreshUsersList(QByteArray data) {
-    model->clear();
+    ui->lw_usersOnline->clear();
     data.remove(0, QString("s:::u|").length());
 
     for (int i = 0; data.length() > 0; i++) {
@@ -201,7 +205,7 @@ void Client::refreshUsersList(QByteArray data) {
 
         if (user == ui->e_login->text()) user.append(" (you)");
 
-        model->appendRow(new QStandardItem(QIcon(":/user.png"), user));
+        ui->lw_usersOnline->addItem(new QListWidgetItem(QIcon(":/user.png"), user));
         data.remove(0, data.indexOf('\n')+1);
     }
 }
@@ -217,6 +221,7 @@ void Client::leaveChatroom()
         abortConnection();
     }
 }
+///                             ==================
 
 void Client::sendMessage()
 {
