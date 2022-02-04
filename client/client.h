@@ -4,8 +4,6 @@
 #include <QMainWindow>
 #include <QTcpSocket>
 #include <QScrollBar>
-#include <QStandardItemModel>
-#include <QStringListModel>
 #include <QKeyEvent>
 #include <QTime>
 #include <QDebug>
@@ -50,5 +48,8 @@ private:
     QTcpSocket *m_socket;
 
     void keyPressEvent(QKeyEvent *event) override;
+    bool eventFilter(QObject* obj, QEvent* event) override;
 };
+
+
 #endif // CLIENT_H

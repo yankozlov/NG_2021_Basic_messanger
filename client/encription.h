@@ -1,7 +1,7 @@
 #ifndef ENCRIPTION_H
 #define ENCRIPTION_H
 
-#include <QApplication>
+#include <QtCore>
 //          Vigenere Cipher
 QByteArray k = "-XEpzq^^yEfA9dpr";
 

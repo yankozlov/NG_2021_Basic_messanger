@@ -5,7 +5,6 @@
 /*              TODO
  * set message length limit
  * implement personal chat
- * send message on Enter pressed
  * encript auth and register data
 */
 
@@ -15,6 +14,8 @@ Client::Client(QWidget *parent)
 {
     ui->setupUi(this);
     m_socket = new QTcpSocket();
+
+    ui->te_message->installEventFilter(this);
 
     connect(ui->b_register, &QPushButton::clicked, this, &Client::onRegisterClicked);
     connect(ui->b_logIn, &QPushButton::clicked, this, &Client::onLogInClicked);
@@ -221,7 +222,6 @@ void Client::leaveChatroom()
         abortConnection();
     }
 }
-///                             ==================
 
 void Client::sendMessage()
 {
@@ -254,10 +254,51 @@ void Client::keyPressEvent(QKeyEvent *event)
         if (ui->stackedWidget->currentIndex() == 1) onCancelClicked();
         else if (ui->stackedWidget->currentIndex() == 2) leaveChatroom();
     }
-//    else if (event->key() == Qt::Key_Enter) {
-//        if (ui->stackedWidget->currentIndex() == 0) onLogInClicked();
-//        if (ui->stackedWidget->currentIndex() == 1) onRegister_2Clicked();
-//    }
+    else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        if (ui->stackedWidget->currentIndex() == 0) {
+            if (ui->e_IP->hasFocus() && !(ui->e_IP->text().isEmpty()))
+                ui->sb_port->setFocus();
+            else if (ui->sb_port->hasFocus() && (ui->e_login->text().isEmpty() ||
+                                                 ui->e_password->text().isEmpty()))
+                ui->e_login->setFocus();
+            else if (ui->e_login->hasFocus() && !(ui->e_login->text().isEmpty()))
+                ui->e_password->setFocus();
+            else if (ui->b_register->hasFocus())
+                onRegisterClicked();
+            else
+                onLogInClicked();
+        }
+        else if (ui->stackedWidget->currentIndex() == 1) {
+            if (ui->e_newLogin->hasFocus() && !(ui->e_newLogin->text().isEmpty()))
+                ui->e_newPassword->setFocus();
+            else if (ui->e_newPassword->hasFocus() && !(ui->e_newPassword->text().isEmpty()))
+                ui->e_repPassword->setFocus();
+            else if (ui->b_cancel->hasFocus())
+                onCancelClicked();
+            else
+                onRegister_2Clicked();
+        }
+        else if (ui->stackedWidget->currentIndex() == 2) {
+            if (ui->b_send->hasFocus())
+                sendMessage();
+            else if (ui->b_leave->hasFocus())
+                leaveChatroom();
+        }
+    }
+}
+
+bool Client::eventFilter(QObject* obj, QEvent* event)
+{
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent* key = static_cast<QKeyEvent*>(event);
+        if ((key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return) && key->modifiers() != Qt::SHIFT) {
+            if (ui->te_message->hasFocus()) Client::sendMessage();
+
+            return true;
+        }
+        else return QObject::eventFilter(obj, event);
+    }
+    else return QObject::eventFilter(obj, event);
 }
 
 Client::~Client()
