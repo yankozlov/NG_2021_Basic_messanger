@@ -4,7 +4,7 @@
  * handle the case of database is being deleted while server works
  * implement the thread sending of messages
  * provide saving of messages
- * decript encripted auth and register data from client
+ * decript encripted auth/register data from client
  */
 
 Server::Server()
@@ -53,6 +53,7 @@ void Server::droppedConnection()
     QTcpSocket *client = (QTcpSocket *)sender();
     if (m_clients.contains(client)) {
         m_clients.removeOne(client);
+        //m_threads.remove(client);
         m_activeUsers.remove(client);
         refreshUsersList();
     }
@@ -91,6 +92,7 @@ bool Server::addUser(QTcpSocket *client, QByteArray dataset)
 void Server::messageReceived(QTcpSocket *client, QByteArray msg)
 {
     msg.remove(0, QByteArray("c:::m|").length());
+    msg.truncate(maxMessageLength);
     QByteArray data = (m_activeUsers[client] + ": " + QString(msg)).toUtf8();
 
     serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|" + data);
@@ -137,7 +139,11 @@ void Server::auth(QTcpSocket *client, QByteArray dataset)
                           + login + "| Authorisation successful!"));
 
         client->write("s:::l|Permitted.");
-
+/*
+        MessageThread messageThread;
+        messageThread.setSocket(client);
+        m_threads.insert(client, messageThread);
+*/
         m_activeUsers.insert(client, login);
         refreshUsersList();
     }

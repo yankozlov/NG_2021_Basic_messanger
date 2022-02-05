@@ -37,6 +37,7 @@ private slots:
     void onCancelClicked();
 
     void refreshUsersList(QByteArray data);
+    void messageLimiter();
     void sendMessage();
     void leaveChatroom();
 
@@ -47,9 +48,9 @@ private:
     Ui::Client *ui;
     QTcpSocket *m_socket;
 
+    const int maxMessageLength = 3000;
+
     void keyPressEvent(QKeyEvent *event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
-
-
 #endif // CLIENT_H

@@ -91,6 +91,9 @@
                 <property name="inputMethodHints">
                  <set>Qt::ImhNone</set>
                 </property>
+                <property name="maxLength">
+                 <number>15</number>
+                </property>
                </widget>
               </item>
              </layout>
@@ -125,19 +128,19 @@
                  <enum>QAbstractSpinBox::NoButtons</enum>
                 </property>
                 <property name="specialValueText">
-                 <string>text</string>
+                 <string/>
                 </property>
                 <property name="correctionMode">
                  <enum>QAbstractSpinBox::CorrectToPreviousValue</enum>
                 </property>
                 <property name="minimum">
-                 <number>-1</number>
+                 <number>0</number>
                 </property>
                 <property name="maximum">
                  <number>65535</number>
                 </property>
                 <property name="value">
-                 <number>-1</number>
+                 <number>0</number>
                 </property>
                 <property name="displayIntegerBase">
                  <number>10</number>
@@ -185,7 +188,11 @@
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="e_login"/>
+               <widget class="QLineEdit" name="e_login">
+                <property name="maxLength">
+                 <number>128</number>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -218,6 +225,9 @@
               </item>
               <item>
                <widget class="QLineEdit" name="e_password">
+                <property name="maxLength">
+                 <number>64</number>
+                </property>
                 <property name="echoMode">
                  <enum>QLineEdit::Password</enum>
                 </property>
@@ -319,7 +329,11 @@
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="e_newLogin"/>
+               <widget class="QLineEdit" name="e_newLogin">
+                <property name="maxLength">
+                 <number>128</number>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -354,6 +368,9 @@
                <widget class="QLineEdit" name="e_newPassword">
                 <property name="contextMenuPolicy">
                  <enum>Qt::DefaultContextMenu</enum>
+                </property>
+                <property name="maxLength">
+                 <number>64</number>
                 </property>
                 <property name="echoMode">
                  <enum>QLineEdit::PasswordEchoOnEdit</enum>
@@ -393,6 +410,9 @@
             </item>
             <item>
              <widget class="QLineEdit" name="e_repPassword">
+              <property name="maxLength">
+               <number>64</number>
+              </property>
               <property name="echoMode">
                <enum>QLineEdit::PasswordEchoOnEdit</enum>
               </property>

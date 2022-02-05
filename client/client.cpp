@@ -3,7 +3,6 @@
 #include "encription.h"
 
 /*              TODO
- * set message length limit
  * implement personal chat
  * encript auth and register data
 */
@@ -31,6 +30,7 @@ Client::Client(QWidget *parent)
     connect(ui->e_newPassword, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
     connect(ui->e_repPassword, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
 
+    connect(ui->te_message, &QTextEdit::textChanged, this, &Client::messageLimiter);
     connect(ui->b_send, &QPushButton::clicked, this, &Client::sendMessage);
     connect(ui->b_leave, &QPushButton::clicked, this, &Client::leaveChatroom);
 
@@ -71,17 +71,14 @@ void Client::received()
         refreshUsersList(receivedData);
     }
     else if (receivedData.indexOf("s:::m|") == 0) {
-        //set limit for chat size
-
-        //QString time_str = QTime::currentTime().toString().remove(5, 3);
-        //for better interface
+        QString time_str = "[" + QTime::currentTime().toString().remove(5, 3) + "]";
 
         receivedData.remove(0, QString("s:::m|").length());
 
         QString senderUsername = receivedData.left(receivedData.indexOf(':'));
         receivedData.remove(0, senderUsername.length()+2);
 
-        receivedData = (senderUsername + ": " + decript(QString(receivedData))).toUtf8();
+        receivedData = (time_str + senderUsername + ": " + decript(QString(receivedData))).toUtf8();
 
         ui->te_chat->setText(ui->te_chat->toHtml() + "\n" + receivedData);
         ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
@@ -182,13 +179,9 @@ void Client::onRegister_2Clicked()
         else if (ui->e_newPassword->text() == ui->e_repPassword->text()) {
             createNewUser();
         }
-        else {
-            ui->statusbar->showMessage("passwords don't match.");
-        }
+        else ui->statusbar->showMessage("passwords don't match.");
     }
-    else {
-        ui->statusbar->showMessage("enter the login.");
-    }
+    else ui->statusbar->showMessage("enter the login.");
 }
 
 void Client::onCancelClicked()
@@ -208,6 +201,22 @@ void Client::refreshUsersList(QByteArray data) {
 
         ui->lw_usersOnline->addItem(new QListWidgetItem(QIcon(":/user.png"), user));
         data.remove(0, data.indexOf('\n')+1);
+    }
+}
+
+void Client::messageLimiter()
+{
+    if (ui->te_message->toPlainText().length() > maxMessageLength) {
+        QString message = ui->te_message->toPlainText();
+        message.truncate(maxMessageLength);
+        ui->te_message->setText(message);
+    }
+    else if (ui->te_message->toPlainText().length() == maxMessageLength) {
+        ui->statusbar->showMessage("you've reached the limit of message length: " + QString::number(maxMessageLength) + " symbols");
+        ui->te_message->moveCursor(QTextCursor::End);
+    }
+    else {
+        ui->statusbar->clearMessage();
     }
 }
 

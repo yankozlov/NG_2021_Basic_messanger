@@ -4,6 +4,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QtSql>
+#include <QThread>
 #include <QDir>
 #include <QTime>
 #include <QDebug>
@@ -14,6 +15,9 @@ class Server : public QTcpServer
 
 public:
     Server();
+
+protected:
+    void incomingConnection(qintptr handle);
 
 private slots:
     void readyRead();
@@ -27,14 +31,15 @@ private slots:
     void auth(QTcpSocket *client, QByteArray dataset);
     void refreshUsersList();
 
-protected:
-    void incomingConnection(qintptr handle);
-
 private:
     void serverLog(QString msg) { qDebug() << QTime::currentTime().toString() + "|[SERVER]:" + msg; }
     void serverErr(QString msg) { qDebug() << QTime::currentTime().toString() + "|[ERROR]: " + msg; }
 
+
+    const int maxMessageLength = 3000;
+
     QVector <QTcpSocket *> m_clients;
+    //QMap <QTcpSocket *, MessageThread> m_threads;
     QMap <QTcpSocket *, QString> m_activeUsers;
     QSqlDatabase database;
 };
