@@ -4,6 +4,8 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QtSql>
+#include <QCryptographicHash>
+#include <QRandomGenerator64>
 #include <QThread>
 #include <QDir>
 #include <QTime>
@@ -26,6 +28,8 @@ private slots:
     void messageReceived(QTcpSocket *client, QByteArray msg);
 
     void setDatabase();
+    QByteArray getHash(QByteArray password, QByteArray salt);
+    bool compHashes(QByteArray login, QByteArray password);
 
     bool checkLogin(QByteArray login);
     void auth(QTcpSocket *client, QByteArray dataset);
@@ -42,6 +46,7 @@ private:
     //QMap <QTcpSocket *, MessageThread> m_threads;
     QMap <QTcpSocket *, QString> m_activeUsers;
     QSqlDatabase database;
+    QCryptographicHash *hasher;
 };
 
 #endif // SERVER_H

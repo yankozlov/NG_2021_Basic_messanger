@@ -9,6 +9,7 @@
 
 Server::Server()
 {
+    hasher = new QCryptographicHash(QCryptographicHash::Sha3_256);
     QDir path = QDir::currentPath();
     database = QSqlDatabase::addDatabase("QSQLITE");
     database.setDatabaseName(path.filePath("users.db"));
@@ -69,13 +70,19 @@ bool Server::addUser(QTcpSocket *client, QByteArray dataset)
     int endOfLogin = dataset.indexOf('\t');
 
     QByteArray login = dataset.left(endOfLogin);
-
     QByteArray password = dataset.remove(0, endOfLogin+1);
+
+    qint64 rand = QRandomGenerator64::global()->generate();
+    QByteArray salt = QByteArray((const char*)&rand, sizeof(rand)).toHex(0);
+    qDebug() << rand << " | " << salt;
+
+    QByteArray hash = getHash(password, salt);
+    qDebug() << hash;
 
     if(checkLogin(login) == true) {
         QSqlQuery query;
         query.exec(QString("INSERT INTO USERS (NICKNAME, PASSWORD) VALUES('%1', '%2');")
-                            .arg(QString(login), QString(password)));
+                            .arg(QString(login), QString(hash)));
 
         serverLog("Added new user: [" + login + "]");
 
@@ -110,6 +117,41 @@ void Server::setDatabase()
                "PASSWORD VARCHAR(32))");
 }
 
+QByteArray Server::getHash(QByteArray password, QByteArray salt)
+{
+    //    return password; // for plain-text password storage
+
+    password.append(salt);
+
+    hasher->reset();
+    hasher->addData(password);
+
+    QByteArray hash = hasher->result();
+    hash = salt + '$' + hash.toHex(0);
+
+    qDebug() << "HASH  " << hash;
+    return hash;
+}
+
+bool Server::compHashes(QByteArray login, QByteArray password)
+{
+    QSqlQuery query;
+    query.exec(QString("SELECT * FROM USERS WHERE NICKNAME = '%1';")
+                        .arg(QString(login)));
+    query.next();
+
+    if (query.isValid()) {
+        QByteArray dbHash = query.value(1).toByteArray();
+        QByteArray salt = dbHash.split('$').at(0);
+
+        QByteArray hash = getHash(password, salt);
+        qDebug() << "DBHASH" << dbHash;
+
+        if (dbHash == hash) return true;
+    }
+    return false;
+}
+
 bool Server::checkLogin(QByteArray login)
 {
     QSqlQuery query;
@@ -128,13 +170,7 @@ void Server::auth(QTcpSocket *client, QByteArray dataset)
     QByteArray login = dataset.left(endOfLogin);
     QByteArray password = dataset.remove(0, endOfLogin+1);
 
-    QSqlQuery query;
-    query.exec(QString("SELECT * FROM USERS WHERE NICKNAME = '%1' AND PASSWORD = '%2';")
-                        .arg(QString(login), QString(password)));
-
-    query.next();
-
-    if (query.isValid()) {
+    if (compHashes(login, password)) {
         serverLog(QString(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|"
                           + login + "| Authorisation successful!"));
 
