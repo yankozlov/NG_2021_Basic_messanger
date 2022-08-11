@@ -1,7 +1,7 @@
 #include <QCoreApplication>
 #include <server.h>
 
-void coreLog(QString msg) { qDebug() << QTime::currentTime().toString() + "|[CORE]: " + msg; }
+#include "logging.h"
 
 int main(int argc, char *argv[])
 {
@@ -11,10 +11,10 @@ int main(int argc, char *argv[])
     bool ok = server->listen(QHostAddress::Any, 8093);
 
     if (ok) {
-        coreLog(("Server started at " + QString::number(8093)).toUtf8());
+        coreLog(QString("Server started at port %1").arg(server->serverPort()).toUtf8());
     }
     else {
-        coreLog("Server crashed!");
+        coreLog("Cannot start the server!");
         coreLog(server->errorString().toUtf8());
     }
 

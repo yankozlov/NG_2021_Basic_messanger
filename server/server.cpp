@@ -1,8 +1,7 @@
 #include "server.h"
+#include "logging.h"
 
 /*                              TODO
- * handle the case of database is being deleted while server works
- * implement the thread sending of messages
  * provide saving of messages
  * decript encripted auth/register data from client
  */
@@ -22,90 +21,78 @@ Server::Server()
         query.exec("DELETE FROM USERS WHERE NICKNAME IS NULL;");
     }
     else {
-        serverErr("Server might work incorrectly: SQL database doesn't open");
+        coreErr("Server might work incorrectly: SQL database doesn't open");
     }
 }
 
 void Server::incomingConnection(qintptr handle)
 {
-    QTcpSocket *client = new QTcpSocket();
-    client->setSocketDescriptor(handle);
+    Worker* client = new Worker(handle);
+    QThread* thread = new QThread;
+    client->moveToThread(thread);
+
+    connect(thread, &QThread::started, client, &Worker::setup);
+
+    connect(client, &Worker::messageReceived, this, &Server::messageReceived);
+    connect(client, &Worker::addUser, this, &Server::addUser);
+    connect(client, &Worker::auth, this, &Server::auth);
+
+    connect(client, &Worker::send, client, &Worker::write);
+
+    connect(client, &Worker::finished, this, &Server::droppedConnection);
+    connect(client, &Worker::finished, thread, &QThread::quit);
+    connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 
     m_clients.append(client);
-    serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + " just connected!");
-
-    connect(client, &QTcpSocket::disconnected, this, &Server::droppedConnection);
-    connect(client, &QTcpSocket::readyRead, this, &Server::readyRead);
-}
-
-void Server::readyRead()
-{
-    QTcpSocket *client = (QTcpSocket *)sender();
-    QByteArray data = client->readAll();
-
-    if(data.indexOf("c:::m|") == 0) { messageReceived(client, data); }
-    else if(data.indexOf("c:::r|") == 0) { addUser(client, data); }
-    else if(data.indexOf("c:::l|") == 0) { auth(client, data); }
-    else serverErr("Unknown protocol.");
+    thread->start();
 }
 
 void Server::droppedConnection()
 {
-    QTcpSocket *client = (QTcpSocket *)sender();
+    Worker *client = (Worker *)sender();
+
     if (m_clients.contains(client)) {
         m_clients.removeOne(client);
-        //m_threads.remove(client);
-        m_activeUsers.remove(client);
         refreshUsersList();
     }
-    serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + " dropped the connection!");
-
-    connect(client, &QTcpSocket::disconnected, this, &Server::droppedConnection);
-    connect(client, &QTcpSocket::readyRead, this, &Server::readyRead);
+    serverLog("dropped the connection!", client->getAddress());
+    client->deleteLater();
 }
 
-bool Server::addUser(QTcpSocket *client, QByteArray dataset)
+void Server::addUser(QByteArray login, QByteArray password)
 {
-    dataset.remove(0, QString("c:::r|").length());
-    int endOfLogin = dataset.indexOf('\t');
-
-    QByteArray login = dataset.left(endOfLogin);
-    QByteArray password = dataset.remove(0, endOfLogin+1);
+    Worker *client = (Worker*)sender();
 
     qint64 rand = QRandomGenerator64::global()->generate();
     QByteArray salt = QByteArray((const char*)&rand, sizeof(rand)).toHex(0);
-    qDebug() << rand << " | " << salt;
 
     QByteArray hash = getHash(password, salt);
-    qDebug() << hash;
 
     if(checkLogin(login) == true) {
         QSqlQuery query;
         query.exec(QString("INSERT INTO USERS (NICKNAME, PASSWORD) VALUES('%1', '%2');")
                             .arg(QString(login), QString(hash)));
 
-        serverLog("Added new user: [" + login + "]");
-
-        client->write("s:::r|Permitted.");
-        return true;
+        serverLog(QString("Added new user: '%1'").arg(QString(login)));
+        emit client->send("s:::r|Permitted.");
     }
     else {
-        serverErr("Login '" + login + "' is already taken.");
-        client->write("s:::r|Forbidden.");
-        return false;
+        serverErr(QString("Login '%1' is already taken.").arg(QString(login)));
+        emit client->send("s:::r|Forbidden.");
     }
 }
 
-void Server::messageReceived(QTcpSocket *client, QByteArray msg)
+void Server::messageReceived(QByteArray msg)
 {
-    msg.remove(0, QByteArray("c:::m|").length());
+    Worker *client = (Worker*)sender();
+
     msg.truncate(maxMessageLength);
-    QByteArray data = (m_activeUsers[client] + ": " + QString(msg)).toUtf8();
+    QByteArray data = ("s:::m|" + client->getNickname() + ": " + QString(msg)).toUtf8();
 
-    serverLog(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|" + data);
+    serverLog(data, client->getAddress());
 
-    for (QTcpSocket *socket : m_clients) {
-        socket->write("s:::m|"+data);
+    for (Worker *client : m_clients) {
+        emit client->send(data);
     }
 }
 
@@ -119,8 +106,6 @@ void Server::setDatabase()
 
 QByteArray Server::getHash(QByteArray password, QByteArray salt)
 {
-    //    return password; // for plain-text password storage
-
     password.append(salt);
 
     hasher->reset();
@@ -129,65 +114,52 @@ QByteArray Server::getHash(QByteArray password, QByteArray salt)
     QByteArray hash = hasher->result();
     hash = salt + '$' + hash.toHex(0);
 
-    qDebug() << "HASH  " << hash;
     return hash;
-}
-
-bool Server::compHashes(QByteArray login, QByteArray password)
-{
-    QSqlQuery query;
-    query.exec(QString("SELECT * FROM USERS WHERE NICKNAME = '%1';")
-                        .arg(QString(login)));
-    query.next();
-
-    if (query.isValid()) {
-        QByteArray dbHash = query.value(1).toByteArray();
-        QByteArray salt = dbHash.split('$').at(0);
-
-        QByteArray hash = getHash(password, salt);
-        qDebug() << "DBHASH" << dbHash;
-
-        if (dbHash == hash) return true;
-    }
-    return false;
 }
 
 bool Server::checkLogin(QByteArray login)
 {
     QSqlQuery query;
-    query.exec(QString("SELECT * FROM USERS WHERE NICKNAME = '%1';").arg(QString(login)));
+    query.exec(QString("SELECT * FROM USERS WHERE NICKNAME = '%1';")
+               .arg(QString(login)));
 
     query.next();
 
     return !query.isValid();
 }
 
-void Server::auth(QTcpSocket *client, QByteArray dataset)
+void Server::auth(QByteArray login, QByteArray password)
 {
-    dataset.remove(0, QString("c:::l|").length());
-    int endOfLogin = dataset.indexOf('\t');
+    Worker *client = (Worker*)sender();
+    bool isSuccessful = false;
 
-    QByteArray login = dataset.left(endOfLogin);
-    QByteArray password = dataset.remove(0, endOfLogin+1);
+    QSqlQuery query;
+    query.exec(QString("SELECT * FROM USERS WHERE NICKNAME = '%1';")
+               .arg(QString(login)));
+    query.next();
 
-    if (compHashes(login, password)) {
-        serverLog(QString(client->peerAddress().toString() + ":" + QString::number(client->peerPort()) + "|"
-                          + login + "| Authorisation successful!"));
+    if (query.isValid()) {
+        QByteArray dbHash = query.value(1).toByteArray();
 
-        client->write("s:::l|Permitted.");
-/*
-        MessageThread messageThread;
-        messageThread.setSocket(client);
-        m_threads.insert(client, messageThread);
-*/
-        m_activeUsers.insert(client, login);
+        QByteArray salt = dbHash.split('$').at(0);
+        QByteArray hash = getHash(password, salt);
+
+        hashLog(hash);
+        dbHashLog(dbHash);
+
+        if (dbHash == hash) isSuccessful = true;
+    }
+
+    if (isSuccessful) {
+        serverLog(QString("%1| Authorisation successful!").arg(QString(login)), client->getAddress());
+        emit client->send("s:::l|Permitted.");
+
+        client->setNickname(login);
         refreshUsersList();
     }
     else {
-        serverErr(QString(client->peerAddress().toString() + ":" + QString::number(client->peerPort())
-                          + "| Authorisation declined."));
-
-        client->write("s:::l|Forbidden.");
+        serverErr("Authorisation declined.", client->getAddress());
+        emit client->send("s:::l|Forbidden.");
     }
 }
 
@@ -195,8 +167,8 @@ void Server::refreshUsersList()
 {
     QList<QString> usersList;
 
-    foreach (QString value, m_activeUsers) {
-        usersList.append(value);
+    foreach (Worker *item, m_clients) {
+        usersList.append(item->getNickname());
     }
 
     usersList.removeDuplicates();
@@ -207,7 +179,7 @@ void Server::refreshUsersList()
     }
 
     serverLog("Active users list" + usersString);
-    for (QTcpSocket *socket : m_clients) {
-        socket->write(usersString.toUtf8());
+    for (Worker *client : m_clients) {
+        emit client->send(usersString.toUtf8());
     }
 }

@@ -3,13 +3,15 @@
 
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QtNetwork>
 #include <QtSql>
 #include <QCryptographicHash>
 #include <QRandomGenerator64>
 #include <QThread>
 #include <QDir>
-#include <QTime>
 #include <QDebug>
+
+#include "worker.h"
 
 class Server : public QTcpServer
 {
@@ -22,29 +24,22 @@ protected:
     void incomingConnection(qintptr handle);
 
 private slots:
-    void readyRead();
     void droppedConnection();
-    bool addUser(QTcpSocket *client, QByteArray dataset);
-    void messageReceived(QTcpSocket *client, QByteArray msg);
+
+    void messageReceived(QByteArray msg);
+    void addUser(QByteArray login, QByteArray password);
+    void auth(QByteArray login, QByteArray password);
 
     void setDatabase();
     QByteArray getHash(QByteArray password, QByteArray salt);
-    bool compHashes(QByteArray login, QByteArray password);
 
     bool checkLogin(QByteArray login);
-    void auth(QTcpSocket *client, QByteArray dataset);
     void refreshUsersList();
 
 private:
-    void serverLog(QString msg) { qDebug() << QTime::currentTime().toString() + "|[SERVER]:" + msg; }
-    void serverErr(QString msg) { qDebug() << QTime::currentTime().toString() + "|[ERROR]: " + msg; }
-
-
     const int maxMessageLength = 3000;
 
-    QVector <QTcpSocket *> m_clients;
-    //QMap <QTcpSocket *, MessageThread> m_threads;
-    QMap <QTcpSocket *, QString> m_activeUsers;
+    QVector <Worker *> m_clients;
     QSqlDatabase database;
     QCryptographicHash *hasher;
 };
