@@ -86,13 +86,13 @@ void Server::messageReceived(QByteArray msg)
 {
     Worker *client = (Worker*)sender();
 
-    msg.truncate(maxMessageLength);
-    QByteArray data = ("s:::m|" + client->getNickname() + ": " + QString(msg)).toUtf8();
+    QString buffer = msg;
+    buffer.truncate(maxMessageLength);
 
-    serverLog(data, client->getAddress());
+    msg = QString("s:::m|" + client->getNickname() + ": " + buffer).toUtf8();
 
     for (Worker *client : m_clients) {
-        emit client->send(data);
+        emit client->send(msg);
     }
 }
 
@@ -165,20 +165,22 @@ void Server::auth(QByteArray login, QByteArray password)
 
 void Server::refreshUsersList()
 {
-    QList<QString> usersList;
+    QStringList buffer;
 
-    foreach (Worker *item, m_clients) {
-        usersList.append(item->getNickname());
+    for (Worker *item : m_clients) {
+        buffer.append(item->getNickname());
     }
 
-    usersList.removeDuplicates();
+    buffer.removeDuplicates();
+    buffer.sort(Qt::CaseInsensitive);
 
-    QString usersString = "s:::u|";
-    for (int i = 0; i < usersList.size(); i++) {
-        usersString.append(usersList.at(i)).append('\n');
-    }
+    if (userList == buffer) return;
+    userList = buffer;
 
-    serverLog("Active users list" + usersString);
+    QString usersString = userList.join('\t');
+    serverLog("Active users list: " + usersString);
+
+    usersString.prepend("s:::u|");
     for (Worker *client : m_clients) {
         emit client->send(usersString.toUtf8());
     }

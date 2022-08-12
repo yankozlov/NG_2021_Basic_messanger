@@ -41,28 +41,19 @@ void Worker::readyRead()
 
     serverLog(data, address);
 
-    if(data.indexOf("c:::m|") == 0) {
-        data.remove(0, QString("c:::m|").length());
+    QString protocol = data.left(QString("c:::#|").length());
+    data.remove(0, QString("c:::#|").length());
 
+    if(protocol == "c:::m|") {
         emit messageReceived(data);
     }
-    else if(data.indexOf("c:::r|") == 0) {
-        data.remove(0, QString("c:::r|").length());
-        int endOfLogin = data.indexOf('\t');
-
-        QByteArray login = data.left(endOfLogin);
-        QByteArray password = data.remove(0, endOfLogin+1);
-
-        emit addUser(login, password);
+    else if(protocol == "c:::r|") {
+        QByteArrayList creds = data.split('\t');
+        emit addUser(creds[0], creds[1]);
     }
-    else if(data.indexOf("c:::l|") == 0) {
-        data.remove(0, QString("c:::l|").length());
-        int endOfLogin = data.indexOf('\t');
-
-        QByteArray login = data.left(endOfLogin);
-        QByteArray password = data.remove(0, endOfLogin+1);
-
-        emit auth(login, password);
+    else if(protocol == "c:::l|") {
+        QByteArrayList creds = data.split('\t');
+        emit auth(creds[0], creds[1]);
     }
     else serverErr("Unknown protocol.");
 }

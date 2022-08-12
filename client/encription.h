@@ -8,7 +8,7 @@ QByteArray k = "-XEpzq^^yEfA9dpr";
 QString encript(QString text)
 {
     for (int i = 0; i < text.length(); i++) {
-        text[i] = (QChar(text[i]).unicode()+QChar(k[i%k.length()]).unicode())%65535;
+        text[i] = QChar(text[i]).unicode()+QChar(k[i%k.length()]).unicode();
     }
     return text;
 }
@@ -16,7 +16,7 @@ QString encript(QString text)
 QString decript(QString text)
 {
     for (int i = 0; i < text.length(); i++) {
-        text[i] = (QChar(text[i]).unicode()-QChar(k[i%k.length()]).unicode()+65535)%65535;
+        text[i] = QChar(text[i]).unicode()-QChar(k[i%k.length()]).unicode();
     }
     return text;
 }

@@ -4,6 +4,7 @@
 
 /*              TODO
  * implement personal chat
+ * implement custom encripton
  * encript auth and register data
 */
 
@@ -67,6 +68,7 @@ void Client::received()
         ui->statusbar->showMessage("wrong login or password. try again.");
         abortConnection();
     }
+
     if (receivedData.indexOf("s:::u|") == 0) {
         refreshUsersList(receivedData);
     }
@@ -95,6 +97,9 @@ void Client::openLogInPage()
     ui->e_login->clear();
     ui->e_password->clear();
 
+    if (ui->e_IP->text().isEmpty() == false)
+        ui->e_login->setFocus();
+
     ui->stackedWidget->setCurrentIndex(0);
 }
 
@@ -104,11 +109,14 @@ void Client::openRegistrationPage()
     ui->e_newPassword->clear();
     ui->e_repPassword->clear();
 
+    ui->e_newLogin->setFocus();
+
     ui->stackedWidget->setCurrentIndex(1);
 }
 
 void Client::openChatroomPage()
 {
+    ui->te_message->setFocus();
     ui->stackedWidget->setCurrentIndex(2);
 }
 
@@ -194,13 +202,10 @@ void Client::refreshUsersList(QByteArray data) {
     ui->lw_usersOnline->clear();
     data.remove(0, QString("s:::u|").length());
 
-    for (int i = 0; data.length() > 0; i++) {
-        QString user = data.left(data.indexOf('\n'));
-
+    const QByteArrayList users = data.split('\t');
+    for (QString user : users) {
         if (user == ui->e_login->text()) user.append(" (you)");
-
         ui->lw_usersOnline->addItem(new QListWidgetItem(QIcon(":/user.png"), user));
-        data.remove(0, data.indexOf('\n')+1);
     }
 }
 
@@ -265,8 +270,11 @@ void Client::keyPressEvent(QKeyEvent *event)
     }
     else if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
         if (ui->stackedWidget->currentIndex() == 0) {
-            if (ui->e_IP->hasFocus() && !(ui->e_IP->text().isEmpty()))
+            if (ui->e_IP->hasFocus() && !(ui->e_IP->text().isEmpty())) {
                 ui->sb_port->setFocus();
+                if (ui->sb_port->value() == 0)
+                    ui->sb_port->clear();
+            }
             else if (ui->sb_port->hasFocus() && (ui->e_login->text().isEmpty() ||
                                                  ui->e_password->text().isEmpty()))
                 ui->e_login->setFocus();

@@ -7,8 +7,10 @@
 void coreLog  (QString msg);
 void coreErr  (QString msg);
 
-void serverLog(QString msg, QString address = "");
-void serverErr(QString msg, QString address = "");
+void serverLog(QString msg);
+void serverLog(QString msg, QString address);
+void serverErr(QString msg);
+void serverErr(QString msg, QString address);
 
 void hashLog  (QString msg);
 void dbHashLog(QString msg);

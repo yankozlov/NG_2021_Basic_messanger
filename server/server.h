@@ -42,6 +42,8 @@ private:
     QVector <Worker *> m_clients;
     QSqlDatabase database;
     QCryptographicHash *hasher;
+
+    QStringList userList;
 };
 
 #endif // SERVER_H

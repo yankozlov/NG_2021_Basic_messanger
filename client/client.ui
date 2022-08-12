@@ -122,7 +122,7 @@
               <item>
                <widget class="QSpinBox" name="sb_port">
                 <property name="focusPolicy">
-                 <enum>Qt::WheelFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <property name="buttonSymbols">
                  <enum>QAbstractSpinBox::NoButtons</enum>
@@ -463,6 +463,9 @@
               <height>100</height>
              </size>
             </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustIgnored</enum>
             </property>
@@ -576,7 +579,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

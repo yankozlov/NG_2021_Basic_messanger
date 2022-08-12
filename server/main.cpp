@@ -11,11 +11,11 @@ int main(int argc, char *argv[])
     bool ok = server->listen(QHostAddress::Any, 8093);
 
     if (ok) {
-        coreLog(QString("Server started at port %1").arg(server->serverPort()).toUtf8());
+        coreLog(QString("Server started at port %1").arg(server->serverPort()));
     }
     else {
         coreLog("Cannot start the server!");
-        coreLog(server->errorString().toUtf8());
+        coreLog(server->errorString());
     }
 
     return a.exec();
