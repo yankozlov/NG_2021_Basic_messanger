@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QTcpSocket>
 #include <QScrollBar>
+#include <QTextEdit>
+#include <QLineEdit>
 #include <QKeyEvent>
 #include <QTime>
 #include <QDebug>
@@ -36,7 +38,10 @@ private slots:
     void onRegister_2Clicked();
     void onCancelClicked();
 
+    void addMessage(QString user, QString msg);
     void refreshUsersList(QByteArray data);
+
+    void loginLimiter();
     void messageLimiter();
     void sendMessage();
     void leaveChatroom();
@@ -49,6 +54,7 @@ private:
     QTcpSocket *m_socket;
 
     const int maxMessageLength = 3000;
+    const int maxLoginLength = 32;
 
     void keyPressEvent(QKeyEvent *event) override;
     bool eventFilter(QObject* obj, QEvent* event) override;

@@ -53,7 +53,8 @@ void Server::droppedConnection()
 
     if (m_clients.contains(client)) {
         m_clients.removeOne(client);
-        refreshUsersList();
+        if (client->getNickname() != "")
+            refreshUsersList(client->getNickname(), '-');
     }
     serverLog("dropped the connection!", client->getAddress());
     client->deleteLater();
@@ -155,7 +156,8 @@ void Server::auth(QByteArray login, QByteArray password)
         emit client->send("s:::l|Permitted.");
 
         client->setNickname(login);
-        refreshUsersList();
+        refreshUsersList(login, '+');
+        sendUsersList(client);
     }
     else {
         serverErr("Authorisation declined.", client->getAddress());
@@ -163,10 +165,35 @@ void Server::auth(QByteArray login, QByteArray password)
     }
 }
 
-void Server::refreshUsersList()
-{
-    QStringList buffer;
+void Server::refreshUsersList(QString user, QChar action) {
+    // action is supposed to be either '+' or '-'
+    QByteArray protocol = "s:::u|";
 
+    QString msg = QString(protocol) + action + user;
+
+    QStringList buffer;
+    for (Worker *item : m_clients) {
+        buffer.append(item->getNickname());
+    }
+
+    if ((action == "-" && buffer.count(user) == 0) ||
+        (action == "+" && buffer.count(user) == 1)) {
+
+        serverLog(msg);
+        for (Worker *client : m_clients) {
+            if (client->getNickname() != user) {
+                emit client->send(msg.toUtf8());
+            }
+        }
+    }
+}
+
+void Server::sendUsersList(Worker *client) {
+    QByteArray protocol = "s:::u|";
+
+    QString msg = QString(protocol) + client->getNickname();
+
+    QStringList buffer;
     for (Worker *item : m_clients) {
         buffer.append(item->getNickname());
     }
@@ -174,14 +201,5 @@ void Server::refreshUsersList()
     buffer.removeDuplicates();
     buffer.sort(Qt::CaseInsensitive);
 
-    if (userList == buffer) return;
-    userList = buffer;
-
-    QString usersString = userList.join('\t');
-    serverLog("Active users list: " + usersString);
-
-    usersString.prepend("s:::u|");
-    for (Worker *client : m_clients) {
-        emit client->send(usersString.toUtf8());
-    }
+    emit client->send(protocol + '#' + buffer.join('\t').toUtf8());
 }

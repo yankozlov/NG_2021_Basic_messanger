@@ -23,11 +23,13 @@ Client::Client(QWidget *parent)
     connect(ui->sb_port, &QSpinBox::textChanged, ui->statusbar, &QStatusBar::clearMessage);
 
     connect(ui->e_login, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
+    connect(ui->e_login, &QLineEdit::textChanged, this, &Client::loginLimiter);
     connect(ui->e_password, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
 
     connect(ui->b_register_2, &QPushButton::clicked, this, &Client::onRegister_2Clicked);
     connect(ui->b_cancel, &QPushButton::clicked, this, &Client::onCancelClicked);
     connect(ui->e_newLogin, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
+    connect(ui->e_newLogin, &QLineEdit::textChanged, this, &Client::loginLimiter);
     connect(ui->e_newPassword, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
     connect(ui->e_repPassword, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
 
@@ -73,17 +75,12 @@ void Client::received()
         refreshUsersList(receivedData);
     }
     else if (receivedData.indexOf("s:::m|") == 0) {
-        QString time_str = "[" + QTime::currentTime().toString().remove(5, 3) + "]";
-
         receivedData.remove(0, QString("s:::m|").length());
 
-        QString senderUsername = receivedData.left(receivedData.indexOf(':'));
-        receivedData.remove(0, senderUsername.length()+2);
+        QString username = receivedData.left(receivedData.indexOf(':'));
+        receivedData.remove(0, username.length()+2);
 
-        receivedData = (time_str + senderUsername + ": " + decript(QString(receivedData))).toUtf8();
-
-        ui->te_chat->setText(ui->te_chat->toHtml() + "\n" + receivedData);
-        ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
+        addMessage(username.append(": "), decript(receivedData));
     }
 }
 
@@ -99,6 +96,8 @@ void Client::openLogInPage()
 
     if (ui->e_IP->text().isEmpty() == false)
         ui->e_login->setFocus();
+    if (ui->sb_port->value() == 0)
+        ui->sb_port->clear();
 
     ui->stackedWidget->setCurrentIndex(0);
 }
@@ -168,7 +167,8 @@ void Client::onLogInClicked()
     if (ui->e_IP->text().isEmpty() == false) {
         if (ui->e_login->text().isEmpty() == false) {
             if (ui->e_password->text().isEmpty() == false) {
-                if (checkConnection() == true) auth();
+                if (checkConnection() == true)
+                    auth();
                 else ui->statusbar->showMessage("cannot connect.");
             }
             else ui->statusbar->showMessage("enter the password.");
@@ -198,26 +198,74 @@ void Client::onCancelClicked()
     abortConnection();
 }
 
-void Client::refreshUsersList(QByteArray data) {
-    ui->lw_usersOnline->clear();
-    data.remove(0, QString("s:::u|").length());
+void Client::addMessage(QString user, QString message) {
+    //QTextEdit* textedit for implementing personal chat
 
-    const QByteArrayList users = data.split('\t');
-    for (QString user : users) {
-        if (user == ui->e_login->text()) user.append(" (you)");
+    QString time_str = "[" + QTime::currentTime().toString().remove(5, 3) + "]";
+    QString msg = time_str + user + message;
+
+    ui->te_chat->setMarkdown(ui->te_chat->toMarkdown() + "\n" + msg);
+    ui->te_chat->verticalScrollBar()->setValue(ui->te_chat->verticalScrollBar()->maximum());
+}
+
+void Client::refreshUsersList(QByteArray data) {
+    data.remove(0, QString("s:::u|").length());
+    QChar action = data.at(0);
+    QString user = data.remove(0, 1);
+    if (action == '+') {
         ui->lw_usersOnline->addItem(new QListWidgetItem(QIcon(":/user.png"), user));
+        ui->lw_usersOnline->sortItems();
+
+        addMessage(user, " has joined the chat");
+    }
+    else if (action == '-') {
+        QListWidgetItem* item = ui->lw_usersOnline->findItems(user, Qt::MatchExactly).at(0);
+        int row = ui->lw_usersOnline->row(item);
+        ui->lw_usersOnline->takeItem(row);
+
+        addMessage(user, " has left the chat");
+    }
+    else {
+        for (QString user : data.split('\t')) {
+            if (user == ui->e_login->text()) user += " (you)";
+            ui->lw_usersOnline->addItem(new QListWidgetItem(QIcon(":/user.png"), user));
+        }
+        ui->lw_usersOnline->sortItems();
+    }
+}
+
+void Client::loginLimiter()
+{
+    QLineEdit* login = (QLineEdit*)sender();
+
+    if (login->text().length() > maxLoginLength) {
+        QString message = login->text();
+        message.truncate(maxLoginLength);
+        login->setText(message);
+    }
+    else if (login->text().length() == maxLoginLength) {
+        ui->statusbar->showMessage("login max length is " +
+                                   QString::number(maxLoginLength) + " symbols");
+
+        login->setCursorPosition(maxLoginLength);
+    }
+    else {
+        ui->statusbar->clearMessage();
     }
 }
 
 void Client::messageLimiter()
 {
+    //QTextEdit* textedit for implementing personal chat
+
     if (ui->te_message->toPlainText().length() > maxMessageLength) {
         QString message = ui->te_message->toPlainText();
         message.truncate(maxMessageLength);
         ui->te_message->setText(message);
     }
     else if (ui->te_message->toPlainText().length() == maxMessageLength) {
-        ui->statusbar->showMessage("you've reached the limit of message length: " + QString::number(maxMessageLength) + " symbols");
+        ui->statusbar->showMessage("you've reached the limit of message length: " +
+                                   QString::number(maxMessageLength) + " symbols");
         ui->te_message->moveCursor(QTextCursor::End);
     }
     else {
@@ -231,6 +279,7 @@ void Client::leaveChatroom()
         openLogInPage();
         ui->te_message->clear();
         ui->te_chat->clear();
+        ui->lw_usersOnline->clear();
     }
     if (m_socket->state() != QAbstractSocket::UnconnectedState) {
         abortConnection();
@@ -250,7 +299,8 @@ void Client::sendMessage()
 void Client::createNewUser()
 {
     if (checkConnection() == true) {
-        m_socket->write(QString("c:::r|" + ui->e_newLogin->text()+'\t'+ui->e_newPassword->text()).toUtf8());
+        m_socket->write(QString("c:::r|" + ui->e_newLogin->text()+'\t'
+                                +ui->e_newPassword->text()).toUtf8());
     }
     else {
         ui->statusbar->showMessage("cannot connect. try again later.");
@@ -259,7 +309,8 @@ void Client::createNewUser()
 
 void Client::auth()
 {
-    m_socket->write(QString("c:::l|" + ui->e_login->text()+'\t'+ui->e_password->text()).toUtf8());
+    m_socket->write(QString("c:::l|" + ui->e_login->text()+'\t'
+                            +ui->e_password->text()).toUtf8());
 }
 
 void Client::keyPressEvent(QKeyEvent *event)
@@ -308,7 +359,8 @@ bool Client::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent* key = static_cast<QKeyEvent*>(event);
-        if ((key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return) && key->modifiers() != Qt::SHIFT) {
+        if ((key->key() == Qt::Key_Enter || key->key() == Qt::Key_Return) &&
+                key->modifiers() != Qt::SHIFT) {
             if (ui->te_message->hasFocus()) Client::sendMessage();
 
             return true;

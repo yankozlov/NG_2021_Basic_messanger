@@ -34,7 +34,8 @@ private slots:
     QByteArray getHash(QByteArray password, QByteArray salt);
 
     bool checkLogin(QByteArray login);
-    void refreshUsersList();
+    void refreshUsersList(QString user, QChar action);
+    void sendUsersList(Worker *client);
 
 private:
     const int maxMessageLength = 3000;
@@ -42,8 +43,6 @@ private:
     QVector <Worker *> m_clients;
     QSqlDatabase database;
     QCryptographicHash *hasher;
-
-    QStringList userList;
 };
 
 #endif // SERVER_H
