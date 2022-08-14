@@ -14,7 +14,7 @@
    <string>Client</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources.qrc">
+   <iconset>
     <normaloff>:/icon.png</normaloff>:/icon.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -190,7 +190,7 @@
               <item>
                <widget class="QLineEdit" name="e_login">
                 <property name="maxLength">
-                 <number>128</number>
+                 <number>32</number>
                 </property>
                </widget>
               </item>
@@ -226,7 +226,7 @@
               <item>
                <widget class="QLineEdit" name="e_password">
                 <property name="maxLength">
-                 <number>64</number>
+                 <number>32</number>
                 </property>
                 <property name="echoMode">
                  <enum>QLineEdit::Password</enum>
@@ -331,7 +331,7 @@
               <item>
                <widget class="QLineEdit" name="e_newLogin">
                 <property name="maxLength">
-                 <number>128</number>
+                 <number>32</number>
                 </property>
                </widget>
               </item>
@@ -370,7 +370,7 @@
                  <enum>Qt::DefaultContextMenu</enum>
                 </property>
                 <property name="maxLength">
-                 <number>64</number>
+                 <number>32</number>
                 </property>
                 <property name="echoMode">
                  <enum>QLineEdit::PasswordEchoOnEdit</enum>
@@ -411,7 +411,7 @@
             <item>
              <widget class="QLineEdit" name="e_repPassword">
               <property name="maxLength">
-               <number>64</number>
+               <number>32</number>
               </property>
               <property name="echoMode">
                <enum>QLineEdit::PasswordEchoOnEdit</enum>
@@ -585,8 +585,6 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <resources>
-  <include location="resources.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

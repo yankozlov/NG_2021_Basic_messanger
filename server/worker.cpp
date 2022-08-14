@@ -45,15 +45,36 @@ void Worker::readyRead()
     data.remove(0, QString("c:::#|").length());
 
     if(protocol == "c:::m|") {
+        if (nickname == "") {
+            socket->write("s:::w|log in before sending messages\n");
+            return;
+        }
         emit messageReceived(data);
     }
     else if(protocol == "c:::r|") {
+        if (nickname != "") {
+            socket->write("s:::w|you need to log out first\n");
+            return;
+        }
         QByteArrayList creds = data.split('\t');
-        emit addUser(creds[0], creds[1]);
+        if (creds.length() >= 2 && creds[0].length() > 0 && creds[0].length() < 32)
+            emit addUser(creds[0], creds[1]);
+        else
+            serverErr("invalid data", address);
     }
     else if(protocol == "c:::l|") {
+        if (nickname != "") {
+            socket->write("s:::w|you are already logged in\n");
+            return;
+        }
         QByteArrayList creds = data.split('\t');
-        emit auth(creds[0], creds[1]);
+        if (creds.length() >= 2)
+            emit auth(creds[0], creds[1]);
+        else
+            serverErr("invalid data", address);
+    }
+    else if(protocol == "c:::e|") {
+        socket->disconnectFromHost();
     }
     else serverErr("Unknown protocol.");
 }

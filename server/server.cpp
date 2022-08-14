@@ -93,7 +93,8 @@ void Server::messageReceived(QByteArray msg)
     msg = QString("s:::m|" + client->getNickname() + ": " + buffer).toUtf8();
 
     for (Worker *client : m_clients) {
-        emit client->send(msg);
+        if (client->getNickname() != "")
+            emit client->send(msg);
     }
 }
 
@@ -189,17 +190,18 @@ void Server::refreshUsersList(QString user, QChar action) {
 }
 
 void Server::sendUsersList(Worker *client) {
-    QByteArray protocol = "s:::u|";
-
-    QString msg = QString(protocol) + client->getNickname();
+    QByteArray protocol = "s:::u|#";
 
     QStringList buffer;
     for (Worker *item : m_clients) {
-        buffer.append(item->getNickname());
+        QString nickname = item->getNickname();
+        if (nickname != "") {
+            buffer.append(nickname);
+        }
     }
 
     buffer.removeDuplicates();
     buffer.sort(Qt::CaseInsensitive);
 
-    emit client->send(protocol + '#' + buffer.join('\t').toUtf8());
+    emit client->send(protocol + buffer.join('\t').toUtf8());
 }

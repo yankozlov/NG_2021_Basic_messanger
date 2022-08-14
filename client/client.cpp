@@ -23,13 +23,11 @@ Client::Client(QWidget *parent)
     connect(ui->sb_port, &QSpinBox::textChanged, ui->statusbar, &QStatusBar::clearMessage);
 
     connect(ui->e_login, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
-    connect(ui->e_login, &QLineEdit::textChanged, this, &Client::loginLimiter);
     connect(ui->e_password, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
 
     connect(ui->b_register_2, &QPushButton::clicked, this, &Client::onRegister_2Clicked);
     connect(ui->b_cancel, &QPushButton::clicked, this, &Client::onCancelClicked);
     connect(ui->e_newLogin, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
-    connect(ui->e_newLogin, &QLineEdit::textChanged, this, &Client::loginLimiter);
     connect(ui->e_newPassword, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
     connect(ui->e_repPassword, &QLineEdit::textChanged, ui->statusbar, &QStatusBar::clearMessage);
 
@@ -225,32 +223,12 @@ void Client::refreshUsersList(QByteArray data) {
 
         addMessage(user, " has left the chat");
     }
-    else {
+    else if (action == '#') {
         for (QString user : data.split('\t')) {
             if (user == ui->e_login->text()) user += " (you)";
             ui->lw_usersOnline->addItem(new QListWidgetItem(QIcon(":/user.png"), user));
         }
         ui->lw_usersOnline->sortItems();
-    }
-}
-
-void Client::loginLimiter()
-{
-    QLineEdit* login = (QLineEdit*)sender();
-
-    if (login->text().length() > maxLoginLength) {
-        QString message = login->text();
-        message.truncate(maxLoginLength);
-        login->setText(message);
-    }
-    else if (login->text().length() == maxLoginLength) {
-        ui->statusbar->showMessage("login max length is " +
-                                   QString::number(maxLoginLength) + " symbols");
-
-        login->setCursorPosition(maxLoginLength);
-    }
-    else {
-        ui->statusbar->clearMessage();
     }
 }
 
